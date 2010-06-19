@@ -62,4 +62,6 @@ public interface UI {
     public void showLoadProgress(int percentComplete);
 
     public void showErrorMsg(String msg);
+
+    void onEndFrame();
 }

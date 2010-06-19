@@ -355,7 +355,9 @@ public class PPU {
 
 		endFrame();
 
+
 		// Notify image buffer:
+		nes.getGui().onEndFrame();
 		nes.getGui().getScreenView().imageReady(false);
 
 		// Reset scanline counter:
@@ -1772,7 +1774,7 @@ public class PPU {
 			// Update internally stored stuff from VRAM memory:
 			/*
 			 * short[] mem = ppuMem.mem;
-			 * 
+			 *
 			 * // Palettes: for(int i=0x3f00;i<0x3f20;i++){ writeMem(i,mem[i]);
 			 * }
 			 */

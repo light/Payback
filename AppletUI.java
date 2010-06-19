@@ -200,4 +200,8 @@ public class AppletUI implements UI {
     public void showErrorMsg(String msg) {
         System.out.println(msg);
     }
+
+    @Override
+    public void onEndFrame() {
+    }
 }
