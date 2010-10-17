@@ -8,12 +8,16 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import payback.opticalflow.FlowAlgorithm;
+
 public class Environment {
     private List<Entity> entities = new ArrayList<Entity>();
 
     private int background;
     private List<Rectangle> megamanSprites;
     private BufferedImage megamanImage;
+
+    private FlowAlgorithm flow = new FlowAlgorithm();
 
     public Environment() throws Exception {
         InputStream ras = null;
@@ -28,6 +32,10 @@ public class Environment {
         background = megamanImage.getRGB( 0, 0 );
         megamanSprites = getSpriteRectangles( megamanImage, background );
 
+    }
+
+    public FlowAlgorithm getFlow() {
+        return flow;
     }
 
     /**
@@ -94,8 +102,9 @@ public class Environment {
     }
 
     public Rectangle update( BufferedImage image ) {
-        Rectangle mm = findMegaman( image );
-        return mm;
+//        Rectangle mm = findMegaman( image );
+        flow.update(image);
+        return null;
 
     }
 

@@ -20,6 +20,7 @@ import payback.Environment;
 
 public class vvUI extends AppletUI {
     private JPanel spritePanel;
+    private JPanel flowPanel;
     private InputHandler joy1 = new vvInputHandler();
     private Environment environment;
 
@@ -33,16 +34,18 @@ public class vvUI extends AppletUI {
             System.exit( 666 );
         }
         spritePanel = new DancingSugarPlumFairiesPanel();
-        showFrame( 300, spritePanel );
-        showFrame( 800, new MagicAddressDivinationWizardPanel() );
+        flowPanel = new FlowPanel();
+        showFrame( 300, 0, spritePanel );
+        showFrame( 300, 300, flowPanel );
+        showFrame( 800, 0, new MagicAddressDivinationWizardPanel() );
 
     }
 
-    private void showFrame( int x, JComponent component ) {
+    private void showFrame( int x, int y, JComponent component ) {
         JFrame jFrame = new JFrame();
         jFrame.add( component );
         jFrame.pack();
-        jFrame.setLocation( x, 0 );
+        jFrame.setLocation( x, y );
         jFrame.setVisible( true );
     }
 
@@ -50,6 +53,7 @@ public class vvUI extends AppletUI {
     public void imageReady( boolean skipFrame ) {
         super.imageReady( skipFrame );
         spritePanel.repaint();
+        flowPanel.repaint();
     }
 
     // @Override
@@ -99,6 +103,63 @@ public class vvUI extends AppletUI {
                 g.setColor( Color.RED );
                 g.drawRect( mmRect.x, mmRect.y, mmRect.width, mmRect.height );
             }
+
+        }
+    }
+
+    private class FlowPanel extends JPanel {
+        private static final double SCALE_FACTOR = 5;
+
+        public FlowPanel() {
+            setPreferredSize( new Dimension( (int) (256 * SCALE_FACTOR), (int) (240 * SCALE_FACTOR) ) );
+        }
+
+        @Override
+        protected void paintComponent( Graphics g ) {
+            super.paintComponent( g );
+
+            float[][] u = environment.getFlow().getU();
+            float[][] v = environment.getFlow().getV();
+
+            if( u == null || v == null )
+                return;
+
+            g.setColor( Color.black );
+
+            float maxNorm = 0;
+            for( int i = 0; i < u.length; i++ ) {
+                for( int j = 0; j < u[0].length; j++ ) {
+                    float uij = u[i][j];
+                    float vij = v[i][j];
+                    maxNorm = Math.max( maxNorm,uij*uij+vij*vij );
+                }
+            }
+            maxNorm = (float) Math.sqrt( maxNorm );
+
+            for( int i = 0; i < u.length; i++ ) {
+                for( int j = 0; j < u[0].length; j++ ) {
+//                    g.setColor( new Color( Color.HSBtoRGB( 0f, 1f, (u[i][j] * u[i][j] + v[i][j] * v[i][j]) / 10 ) ) );
+//                    g.drawRect( i, j, 1, 1 );
+
+                    float uij = u[i][j];
+                    float vij = v[i][j];
+                    float norm = (float) Math.sqrt( uij*uij+vij*vij );
+                    double x = i*SCALE_FACTOR;
+                    double y = j*SCALE_FACTOR;
+                    g.setColor(new Color( Color.HSBtoRGB( 0, 0, norm %256 ) ));
+                    if( norm > 0.5*maxNorm) {
+                        g.setColor( Color.red );
+                    } else if (norm < .25*maxNorm) {
+                        g.setColor( Color.blue );
+                    } else {
+                        g.setColor( Color.black );
+                    }
+//                    if(norm > 0.00001f)
+                    g.drawLine( (int)x, (int)y, (int)(x+uij*3/maxNorm), (int) (y+vij*3/maxNorm) );
+
+                }
+            }
+
 
         }
     }
@@ -197,11 +258,11 @@ public class vvUI extends AppletUI {
 
     @Override
     public void onEndFrame() {
-        if( frameLimiter++ % 10 == 0 ) {
+//        if( frameLimiter++ % 10 == 0 ) {
             long start = System.currentTimeMillis();
-            mmRect = environment.update( (BufferedImage) getScreenView().getImage() );
+            environment.update( (BufferedImage) getScreenView().getImage() );
             System.out.println(System.currentTimeMillis()-start);
-        }
+//        }
     }
 
 }
