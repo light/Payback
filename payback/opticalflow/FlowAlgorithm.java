@@ -1,6 +1,5 @@
 package payback.opticalflow;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 public class FlowAlgorithm {
@@ -12,13 +11,48 @@ public class FlowAlgorithm {
 	/** The pixel brightness values, for the previous and current frames. */
 	private float[][][] e;
 	/** Computed values for each pixel. */
-	private float[][] u, v, ex, ey, et, vbar, ubar, norm;
+	private float[][] u, v, ex, ey, et, vbar, ubar, norms;
+	/** Labels. */
+	private Label[][] labels;
 
 	/** A magic (constant) value. */
 	private float alpha = .1f;
 
 	/** Number of loops in the velocity computation. */
-	private final static int NB_ITERATIONS = 6;
+	private final static int NB_ITERATIONS = 8;
+
+	/**
+	 * Compute a color's brightness value.
+	 * 
+	 * @param rgb
+	 *            the color's RGB values as an integer (0xRRGGBB)
+	 */
+	private static float getBrightness(int rgb) {
+		int red = (rgb >> 16) & 0xff;
+		int green = (rgb >> 8) & 0xff;
+		int blue = (rgb) & 0xff;
+		float brightness = (float) ((.2126 * red + .7152 * green + .0722 * blue) / 255);
+		return brightness;
+	}
+
+	/**
+	 * Computes the scalar product of vectors at (i,j) and (k,l).
+	 */
+	private static float scalar(float[][] u, float[][] v, int i, int j, int k, int l) {
+		if (k < 0) {
+			k = 0;
+		}
+		if (l < 0) {
+			l = 0;
+		}
+		if (k > u.length - 1) {
+			k = u.length - 1;
+		}
+		if (l > u[0].length - 1) {
+			l = u[0].length - 1;
+		}
+		return u[i][j] * u[k][l] + v[i][j] * v[k][l];
+	}
 
 	/**
 	 * Update all computed values.
@@ -47,7 +81,7 @@ public class FlowAlgorithm {
 			vbar = new float[w][h];
 			u = new float[w][h];
 			v = new float[w][h];
-			norm = new float[w][h];
+			norms = new float[w][h];
 		}
 
 		// compute the E values
@@ -56,12 +90,12 @@ public class FlowAlgorithm {
 		for (int x = 0; x < w; x++) {
 			for (int y = 0; y < h; y++) {
 				int rgb = images[1].getRGB(x, y);
-				int r = (rgb & 0xFF0000) >> 16;
-				int g = (rgb & 0xFF00) >> 8;
-				int b = (rgb & 0xFF);
-
-				float[] hsbvals = Color.RGBtoHSB(r, g, b, null);
-				e[1][x][y] = hsbvals[2];
+				// int r = (rgb & 0xFF0000) >> 16;
+				// int g = (rgb & 0xFF00) >> 8;
+				// int b = (rgb & 0xFF);
+				// float[] hsbvals = Color.RGBtoHSB(r, g, b, null);
+				// e[1][x][y] = hsbvals[2];
+				e[1][x][y] = getBrightness(rgb);
 			}
 		}
 
@@ -156,8 +190,53 @@ public class FlowAlgorithm {
 				}
 				float uxy = u[x][y];
 				float vxy = v[x][y];
-				norm[x][y] = (float) Math.sqrt(uxy * uxy + vxy * vxy);
+				norms[x][y] = (float) Math.sqrt(uxy * uxy + vxy * vxy);
 			}
+		}
+
+		// compute labels
+		double threshold = .01; // how to guess it right ??
+		labels = new Label[w][h]; // reset labels to null
+		int nextLabel = 1;
+		for (int i = 1; i < w - 1; i++) {
+			for (int j = 1; j < h - 1; j++) {
+				if (labels[i][j] == null)
+					for (int p = -1; p < 2; p++) {
+						for (int q = -1; q < 2; q++) {
+							// float likeliness = Math
+							// .abs(1 - scalar(u, v, i, j, i + p, j + q) /
+							// scalar(u, v, i, j, i, j));
+							float likeliness = Math.abs(u[i][j] * v[i + p][j + q] - u[i + p][j + q] * v[i][j]);
+							if ((p != 0 || q != 0) && likeliness < threshold) {
+								if (labels[i + p][j + q] != null) {
+									if (labels[i][j] == null) {
+										labels[i][j] = labels[i + p][j + q];
+									} else {
+										labels[i][j].value = labels[i + p][j + q].value;
+									}
+								} else {
+									if (labels[i][j] == null) {
+										labels[i][j] = labels[i + p][j + q] = new Label(nextLabel++);
+									} else {
+										labels[i + p][j + q] = labels[i][j];
+									}
+								}
+							}
+						}
+					} // neighborhood
+			}
+		}
+		// System.out.println("labels: " + nextLabel + " -- " + w * h +
+		// " pixels -- " + (int) (100 * nextLabel / (w * h))
+		// + "% isolation");
+
+	}
+
+	public static class Label {
+		public int value;
+
+		public Label(int value) {
+			this.value = value;
 		}
 	}
 
@@ -172,7 +251,13 @@ public class FlowAlgorithm {
 	}
 
 	/** Expose the computed velocity norms. */
-	public float[][] getNorm() {
-		return norm;
+	public float[][] getNorms() {
+		return norms;
 	}
+
+	/** Expose the computed labels. */
+	public Label[][] getLabels() {
+		return labels;
+	}
+
 }

@@ -17,6 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
 import payback.Environment;
+import payback.opticalflow.FlowAlgorithm.Label;
 
 @SuppressWarnings("serial")
 public class vvUI extends AppletUI {
@@ -112,26 +113,7 @@ public class vvUI extends AppletUI {
 		private static final double SCALE_FACTOR = 3;
 
 		public FlowPanel() {
-			setPreferredSize(new Dimension((int) (256 * SCALE_FACTOR), (int) (240 * SCALE_FACTOR)));
-		}
-
-		/**
-		 * Computes the scalar product of velocities at (i,j) and (k,l).
-		 */
-		private float scalar(float[][] u, float[][] v, int i, int j, int k, int l) {
-			if (k < 0) {
-				k = 0;
-			}
-			if (l < 0) {
-				l = 0;
-			}
-			if (k > u.length - 1) {
-				k = u.length - 1;
-			}
-			if (l > u[0].length - 1) {
-				l = u[0].length - 1;
-			}
-			return u[i][j] * u[k][l] + v[i][j] * v[k][l];
+			setPreferredSize(new Dimension((int) (2 * 256 * SCALE_FACTOR), (int) (240 * SCALE_FACTOR)));
 		}
 
 		@Override
@@ -140,15 +122,19 @@ public class vvUI extends AppletUI {
 
 			float[][] u = environment.getFlow().getU();
 			float[][] v = environment.getFlow().getV();
-			float[][] n = environment.getFlow().getNorm();
+			float[][] n = environment.getFlow().getNorms();
+			Label[][] l = environment.getFlow().getLabels();
 
-			if (u == null || v == null || n == null) {
+			if (u == null || v == null || n == null || l == null) {
 				return; // avoid NPE
 			}
 
+			int w = u.length;
+			int h = u[0].length;
+
 			float maxNorm = 0;
-			for (int i = 0; i < u.length; i++) {
-				for (int j = 0; j < u[0].length; j++) {
+			for (int i = 0; i < w; i++) {
+				for (int j = 0; j < h; j++) {
 					maxNorm = Math.max(maxNorm, n[i][j]);
 				}
 			}
@@ -156,38 +142,40 @@ public class vvUI extends AppletUI {
 			// just for fun (may help define a threshold ?)
 			// showVelocityHistogram(g, u, v, maxNorm);
 
-			for (int i = 0; i < u.length; i++) {
-				for (int j = 0; j < u[0].length; j++) {
+			int[] colors = new int[] { 0xFF, 0x00FF, 0x0000FF };
+
+			for (int i = 0; i < w; i++) {
+				for (int j = 0; j < h; j++) {
 					float uij = u[i][j];
 					float vij = v[i][j];
 					float norm = n[i][j];
 					double x = i * SCALE_FACTOR;
 					double y = j * SCALE_FACTOR;
 
-					g.setColor(new Color(Color.HSBtoRGB(0, 0, norm * 256 / maxNorm)));
+					// show non-null labels
+					double x2 = (w + i) * SCALE_FACTOR;
+					double y2 = j * SCALE_FACTOR;
+					if (l[i][j] != null) {
+						g.setColor(new Color(Integer.parseInt(Integer.toString(l[i][j].value), 16) % 0xEFFFFF));
+						g.fillRect((int) (x2 - SCALE_FACTOR / 2), (int) (y2 - SCALE_FACTOR / 2), (int) (SCALE_FACTOR),
+								(int) (SCALE_FACTOR));
+					}
+
+					// color based on the velocity (gradient)
+					// g.setColor(new Color(Color.HSBtoRGB(0, 0, norm * 256 /
+					// maxNorm)));
+
+					// color based on the velocity (fractions)
 					if (norm > 0.5 * maxNorm) {
 						g.setColor(Color.red);
 					} else if (norm < .25 * maxNorm) {
-						g.setColor(Color.blue);
-					} else {
 						g.setColor(Color.black);
+					} else {
+						g.setColor(Color.blue);
 					}
 
-					// if(norm > 0.00001f)
 					g.drawLine((int) x, (int) y, (int) (x + uij * SCALE_FACTOR * .7 / maxNorm), (int) (y + vij
 							* SCALE_FACTOR * .7 / maxNorm));
-
-					// find area of same velocity
-					g.setColor(Color.CYAN);
-					double threshold = .3; // related to the histogram ?
-					for (int p = -1; p < 2; p++) {
-						for (int q = -1; q < 2; q++) {
-							if ((p != 0 || q != 0) && Math.sqrt(scalar(u, v, i, j, i + p, j + q)) > threshold * maxNorm) {
-								g.drawRect((int) x - 2, (int) y - 2, 5, 5);
-							}
-						}
-					}
-
 				}
 			}
 
