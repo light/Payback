@@ -2,9 +2,17 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.color.ColorSpace;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DirectColorModel;
+import java.awt.image.MemoryImageSource;
+import java.awt.image.WritableRaster;
 import java.util.Arrays;
 
 import javax.swing.AbstractAction;
@@ -23,11 +31,16 @@ import payback.opticalflow.FlowAlgorithm.Label;
 public class vvUI extends AppletUI {
 	private JPanel spritePanel;
 	private JPanel flowPanel;
+	private JPanel flowPanel2;
 	private InputHandler joy1 = new vvInputHandler();
 	private Environment environment;
 
 	public vvUI(vNES applet) {
 		super(applet);
+		getNES().papu.setChannelEnabled( 0, false );
+		getNES().papu.setChannelEnabled( 1, false );
+		getNES().papu.setChannelEnabled( 2, false );
+		getNES().papu.setChannelEnabled( 3, false );
 
 		try {
 			environment = new Environment();
@@ -36,10 +49,12 @@ public class vvUI extends AppletUI {
 			System.exit(666);
 		}
 		spritePanel = new DancingSugarPlumFairiesPanel();
-		flowPanel = new FlowPanel();
+//		flowPanel = new FlowPanel();
+		flowPanel2 = new FlowPanel2(environment);
 		showFrame(300, 0, spritePanel);
-		showFrame(300, 300, flowPanel);
+//		showFrame(300, 300, flowPanel);
 		showFrame(800, 0, new MagicAddressDivinationWizardPanel());
+		showFrame(800, 0, flowPanel2);
 
 	}
 
@@ -55,7 +70,8 @@ public class vvUI extends AppletUI {
 	public void imageReady(boolean skipFrame) {
 		super.imageReady(skipFrame);
 		spritePanel.repaint();
-		flowPanel.repaint();
+//		flowPanel.repaint();
+		flowPanel2.repaint();
 	}
 
 	// @Override
@@ -132,12 +148,12 @@ public class vvUI extends AppletUI {
 			int w = u.length;
 			int h = u[0].length;
 
-			float maxNorm = 0;
-			for (int i = 0; i < w; i++) {
-				for (int j = 0; j < h; j++) {
-					maxNorm = Math.max(maxNorm, n[i][j]);
-				}
-			}
+            float maxNorm = 0;
+            for (int i = 0; i < w; i++) {
+                for (int j = 0; j < h; j++) {
+                    maxNorm = Math.max(maxNorm, n[i][j]);
+                }
+            }
 
 			// just for fun (may help define a threshold ?)
 			// showVelocityHistogram(g, u, v, maxNorm);
@@ -156,7 +172,7 @@ public class vvUI extends AppletUI {
 					double x2 = (w + i) * SCALE_FACTOR;
 					double y2 = j * SCALE_FACTOR;
 					if (l[i][j] != null) {
-						g.setColor(new Color(Integer.parseInt(Integer.toString(l[i][j].value), 16) % 0xEFFFFF));
+						g.setColor(new Color(l[i][j].value*3498238));
 						g.fillRect((int) (x2 - SCALE_FACTOR / 2), (int) (y2 - SCALE_FACTOR / 2), (int) (SCALE_FACTOR),
 								(int) (SCALE_FACTOR));
 					}
@@ -202,6 +218,66 @@ public class vvUI extends AppletUI {
 			}
 		}
 	}
+
+    private static class FlowPanel2 extends JPanel {
+        private static float maxNorm = 0;
+        private final Environment environment;
+
+        public FlowPanel2(Environment environment) {
+            this.environment = environment;
+            setPreferredSize( new Dimension( 256, 240 ) );
+        }
+
+        @Override
+        protected void paintComponent( Graphics g ) {
+            super.paintComponent( g );
+
+            float[][] u = environment.getFlow().getU();
+            float[][] v = environment.getFlow().getV();
+            float[][] n = environment.getFlow().getNorms();
+            Label[][] l = environment.getFlow().getLabels();
+
+            if( u == null || v == null || n == null || l == null ) {
+                return; // avoid NPE
+            }
+
+            int w = u.length;
+            int h = u[0].length;
+
+            ColorModel colorModel = new DirectColorModel( 24, 0x00ff0000, 0x0000ff00, 0x000000ff, 0 );
+            int[] pixels = new int[w * h];
+
+            float maxNorm = 0;
+            for (int i = 0; i < w; i++) {
+                for (int j = 0; j < h; j++) {
+                    maxNorm = Math.max(maxNorm, n[i][j]);
+                }
+            }
+
+            for( int i = 0; i < w; i++ ) {
+                for( int j = 0; j < h; j++ ) {
+                    float uij = u[i][j];
+                    float vij = v[i][j];
+                    float norm = n[i][j];
+
+                    double angle;
+                    if( uij == 0 ) {
+                        angle = vij > 0 ? Math.PI / 2 : -Math.PI / 2;
+                    } else {
+                        angle = Math.atan( vij / uij );
+                    }
+                    float intensity = norm / maxNorm;
+                    pixels[i + j * w] = Color.HSBtoRGB( (float) ((angle%2*Math.PI) / (2 * Math.PI)), intensity, intensity );
+                }
+            }
+
+            MemoryImageSource imageSource = new MemoryImageSource( w, h, colorModel, pixels, 0, w );
+            Image image = Toolkit.getDefaultToolkit().createImage( imageSource );
+
+            g.drawImage( image, 0, 0, null );
+        }
+
+    }
 
 	private class MagicAddressDivinationWizardPanel extends JPanel {
 		private static final int RAM_SIZE = 0x800;
@@ -300,9 +376,9 @@ public class vvUI extends AppletUI {
 	@Override
 	public void onEndFrame() {
 		// if( frameLimiter++ % 10 == 0 ) {
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 		environment.update((BufferedImage) getScreenView().getImage());
-		System.out.println(System.currentTimeMillis() - start);
+//		System.out.println(System.currentTimeMillis() - start);
 		// }
 	}
 
