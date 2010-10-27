@@ -811,7 +811,7 @@ public final class PAPU {
         sampleTimerMax = (int) ((1024.0 * Globals.CPU_FREQ_NTSC * Globals.preferredFrameRate) /
                 (sampleRate * 60.0d));
 
-        frameTime = (int) ((14915.0 * (double) Globals.preferredFrameRate) / 60.0d);
+        frameTime = (int) ((14915.0 * Globals.preferredFrameRate) / 60.0d);
 
         sampleTimer = 0;
         bufferIndex = 0;
@@ -1021,7 +1021,7 @@ public final class PAPU {
         for (int i = 0; i < 32 * 16; i++) {
 
 
-            value = 95.52 / (8128.0 / ((double) i / 16.0) + 100.0);
+            value = 95.52 / (8128.0 / (i / 16.0) + 100.0);
             value *= 0.98411;
             value *= 50000.0;
             ival = (int) value;
@@ -1035,7 +1035,7 @@ public final class PAPU {
 
         for (int i = 0; i < 204 * 16; i++) {
 
-            value = 163.67 / (24329.0 / ((double) i / 16.0) + 100.0);
+            value = 163.67 / (24329.0 / (i / 16.0) + 100.0);
             value *= 0.98411;
             value *= 50000.0;
             ival = (int) value;
