@@ -78,7 +78,7 @@ public class vvUI extends AppletUI {
      * @param image
      */
     private static void doGrouping( BufferedImage image ) {
-        int N = 3; // Max neighborhood distance
+        int N = 2; // Max neighborhood distance
         double L = 100; // Min brightness to be considered lit
         List<Rectangle> groups = new ArrayList<Rectangle>();
 
