@@ -1,6 +1,8 @@
 package payback.opticalflow;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
 
 public class FlowAlgorithm {
     /** The previous and current frames. */
@@ -59,6 +61,7 @@ public class FlowAlgorithm {
      * @param image the current frame
      */
     public void update( BufferedImage image ) {
+        image = blurImage( image );
         images[0] = images[1];
         h = image.getHeight();
         w = image.getWidth();
@@ -165,23 +168,9 @@ public class FlowAlgorithm {
         // compute norms
         for( int i = 0; i < w; i++ ) {
             for( int j = 0; j < h; j++ ) {
-                int x = i;
-                int y = j;
-                if( x == 0 ) {
-                    x = 1;
-                }
-                if( x == w - 1 ) {
-                    x = w - 2;
-                }
-                if( y == 0 ) {
-                    y = 1;
-                }
-                if( y == h - 1 ) {
-                    y = h - 2;
-                }
-                float uxy = u[x][y];
-                float vxy = v[x][y];
-                norms[x][y] = (float) Math.sqrt( uxy * uxy + vxy * vxy );
+                float uxy = u[i][j];
+                float vxy = v[i][j];
+                norms[i][j] = (float) Math.sqrt( uxy * uxy + vxy * vxy );
             }
         }
 
@@ -222,6 +211,21 @@ public class FlowAlgorithm {
         // + "% isolation");
 
     }
+
+    /**
+     * 3x3 Bock blur kernel.
+     * @param image
+     * @return blurred image.
+     */
+    public BufferedImage blurImage( BufferedImage image ) {
+        ConvolveOp filter = new ConvolveOp( new Kernel( 3, 3, new float[] {
+                0.111f, 0.111f, 0.111f,
+                0.111f, 0.111f, 0.111f,
+                0.111f, 0.111f, 0.111f
+        }), ConvolveOp.EDGE_NO_OP, null );
+        return filter.filter( image, null );
+    }
+
 
     /**
      * Compare le vecteur en (x, y) au vecteur en (i, j) et s'ils sont suffisamment proches,

@@ -15,6 +15,7 @@ import java.awt.image.MemoryImageSource;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +80,7 @@ public class vvUI extends AppletUI {
      */
     private static void doGrouping( BufferedImage image ) {
         int N = 2; // Max neighborhood distance
-        double L = 100; // Min brightness to be considered lit
+        double L = 180; // Min brightness to be considered lit
         List<Rectangle> groups = new ArrayList<Rectangle>();
 
         int w = image.getWidth();
@@ -317,11 +318,36 @@ public class vvUI extends AppletUI {
 
             float[][] u = environment.getFlow().getU();
             float[][] v = environment.getFlow().getV();
-            float[][] n = environment.getFlow().getNorms();
+            // float[][] n = environment.getFlow().getNorms();
+            float[][] n = new float[w][h];
             Label[][] l = environment.getFlow().getLabels();
 
             if( u == null || v == null || n == null || l == null ) {
                 return; // avoid NPE
+            }
+
+
+
+            // Compute the median
+            float[] allu = new float[w*h];
+            float[] allv = new float[w*h];
+            for( int i = 0; i < w; i++ ) {
+                System.arraycopy( u[i], 0, allu, i*h, h );
+                System.arraycopy( v[i], 0, allv, i*h, h );
+            }
+            Arrays.sort( allu );
+            Arrays.sort( allv );
+            float medianu = allu[(w*h)/2]; // Not exactly, we may be slightly off if w*h is even.
+            float medianv = allv[(w*h)/2];
+
+            // compute norms
+            // TODO refactor :D
+            for( int i = 0; i < w; i++ ) {
+                for( int j = 0; j < h; j++ ) {
+                    float uxy = u[i][j] - medianu;
+                    float vxy = v[i][j] - medianv;
+                    n[i][j] = (float) Math.sqrt( uxy * uxy + vxy * vxy );
+                }
             }
 
             // maxNorm = 0;
@@ -335,8 +361,8 @@ public class vvUI extends AppletUI {
 
             for( int i = 0; i < w; i++ ) {
                 for( int j = 0; j < h; j++ ) {
-                    float uij = u[i][j];
-                    float vij = v[i][j];
+                    float uij = u[i][j] - medianu;
+                    float vij = v[i][j] - medianv;
                     float norm = n[i][j];
 
                     double angle;
