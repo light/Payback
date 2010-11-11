@@ -28,31 +28,12 @@ public class FlowAlgorithm {
      *
      * @param rgb the color's RGB values as an integer (0xRRGGBB)
      */
-    private static float getBrightness( int rgb ) {
+    public static float getBrightness( int rgb ) {
         int red = (rgb >> 16) & 0xff;
         int green = (rgb >> 8) & 0xff;
         int blue = (rgb) & 0xff;
         float brightness = (float) ((.2126 * red + .7152 * green + .0722 * blue) / 255);
         return brightness;
-    }
-
-    /**
-     * Computes the scalar product of vectors at (i,j) and (k,l).
-     */
-    private static float scalar( float[][] u, float[][] v, int i, int j, int k, int l ) {
-        if( k < 0 ) {
-            k = 0;
-        }
-        if( l < 0 ) {
-            l = 0;
-        }
-        if( k > u.length - 1 ) {
-            k = u.length - 1;
-        }
-        if( l > u[0].length - 1 ) {
-            l = u[0].length - 1;
-        }
-        return u[i][j] * u[k][l] + v[i][j] * v[k][l];
     }
 
     /**
@@ -183,7 +164,6 @@ public class FlowAlgorithm {
 //        }
 
         // compute labels
-        double threshold = .01; // how to guess it right ??
         labels = new Label[w][h]; // reset labels to null
         int nextLabel = 1;
         labels[0][0] = new Label( u[0][0], v[0][0], nextLabel++ );
@@ -205,10 +185,6 @@ public class FlowAlgorithm {
                 }
             }
         }
-
-        // System.out.println("labels: " + nextLabel + " -- " + w * h +
-        // " pixels -- " + (int) (100 * nextLabel / (w * h))
-        // + "% isolation");
 
     }
 

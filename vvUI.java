@@ -2,16 +2,13 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.DirectColorModel;
-import java.awt.image.MemoryImageSource;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
@@ -24,6 +21,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import payback.Environment;
+import payback.opticalflow.FlowAlgorithm;
 import payback.opticalflow.FlowAlgorithm.Label;
 
 @SuppressWarnings( "serial" )
@@ -77,10 +75,12 @@ public class vvUI extends AppletUI {
      * Draws bounding rectangles around groups of lit pixels. Two pixels are considered part of the same group if they
      * are within 2 pixels of each other (Manhattan distance).
      * @param image
+     * @param v 
+     * @param u 
      */
-    private static void doGrouping( BufferedImage image ) {
+    private static void doGrouping( BufferedImage image, float[][] u, float[][] v ) {
         int N = 2; // Max neighborhood distance
-        double L = 180; // Min brightness to be considered lit
+        int L = 150; // Min brightness to be considered lit
         List<Rectangle> groups = new ArrayList<Rectangle>();
 
         int w = image.getWidth();
@@ -88,15 +88,7 @@ public class vvUI extends AppletUI {
 
         for( int x = 0; x < w; x++ ) {
             for( int y = 0; y < h; y++ ) {
-                int rgb = image.getRGB( x, y );
-                int rr = (rgb & 0xFF0000) >> 16;
-                int gg = (rgb & 0xFF00) >> 8;
-                int bb = (rgb & 0xFF);
-                int max = (rr > gg) ? rr : gg;
-                if (bb > max) max = bb;
-                boolean lit = max > L;
-
-                out: if( lit ) {
+                out: if( isPixelLit(image, L, x, y) ) {
                      for( Rectangle r: groups ) {
                          if(x >= r.x-N && x <= r.x+r.width+N && y >= r.y-N && y <= r.y+r.height+N) {
                              int nx1 = Math.min( x, r.x );
@@ -119,7 +111,7 @@ public class vvUI extends AppletUI {
                 for(int j=i+1; j < groups.size(); j++) {
                     Rectangle r1 = groups.get( i );
                     Rectangle r2 = groups.get( j );
-                    if(r1.intersects( r2 )) {
+                    if( r1.intersects( r2 ) ) {
                         r1.setBounds( r1.union( r2 ) );
                         groups.remove( j );
                         j--;
@@ -129,11 +121,46 @@ public class vvUI extends AppletUI {
         }
 
         Graphics g = image.getGraphics();
-        g.setColor( Color.green );
-        for( Rectangle r: groups ) {
-            g.drawRect( r.x, r.y, r.width, r.height );
+        g.setColor(Color.green);
+        for (Rectangle r : groups) {
+            g.drawRect(r.x, r.y, r.width, r.height);
+            if (u != null && v != null) {
+                int cx = r.x + r.width / 2;
+                int cy = r.y + r.height / 2;
+                float uMean = 0f;
+                float vMean = 0f;
+                int nb = 0;
+                for (int i = r.x; i < r.x + r.width; i++) {
+                    for (int j = r.y; j < r.y + r.height; j++) {
+                        if (!isPixelLit(image, L, i, j))
+                            continue;
+                        uMean += u[i][j];
+                        vMean += v[i][j];
+                        nb++;
+                    }
+                }
+                uMean /= nb;
+                vMean /= nb;
+                double norm = Math.sqrt(uMean * uMean + vMean * vMean);
+                g.drawLine(cx, cy, cx + (int) (10 * uMean / norm), cy + (int) (10 * vMean / norm));
+                g.setColor(Color.cyan);
+                g.drawLine(cx, cy, cx + (int) (10 * uMean), cy + (int) (10 * vMean));
+                g.setColor(Color.green);
+            }
         }
 
+    }
+
+    private static boolean isPixelLit(BufferedImage image, int L, int x, int y) {
+        int rgb = image.getRGB( x, y );
+        return L < 255 * FlowAlgorithm.getBrightness(rgb);
+//        int rr = (rgb & 0xFF0000) >> 16;
+//        int gg = (rgb & 0xFF00) >> 8;
+//        int bb = (rgb & 0xFF);
+//        int max = (rr > gg) ? rr : gg;
+//        if (bb > max) max = bb;
+//        boolean lit = max > L;
+//        return lit;
     }
 
     private class SpritesPanel extends JPanel {
@@ -151,7 +178,7 @@ public class vvUI extends AppletUI {
             BufferedImage image = new BufferedImage( 256, 240, BufferedImage.TYPE_INT_RGB );
 
             drawSilhouette( image.getGraphics(), true, false );
-            doGrouping( image );
+            doGrouping( image, null, null );
 
             g.drawImage( image, 0, 0, null );
 
@@ -225,7 +252,7 @@ public class vvUI extends AppletUI {
                 }
             }
 
-            // just for fun (may help define a threshold ?)
+            // just for fun
             // showVelocityHistogram(g, u, v, maxNorm);
 
             int[] colors = new int[] { 0xFF, 0x00FF, 0x0000FF };
@@ -326,8 +353,6 @@ public class vvUI extends AppletUI {
                 return; // avoid NPE
             }
 
-
-
             // Compute the median
             float[] allu = new float[w*h];
             float[] allv = new float[w*h];
@@ -376,7 +401,7 @@ public class vvUI extends AppletUI {
                 }
             }
 
-            doGrouping( image );
+            doGrouping( image, u, v );
 
             g.drawImage( image, 0, 0, null );
         }
