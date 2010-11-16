@@ -1,5 +1,6 @@
 package payback.fft;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 import payback.opticalflow.FlowAlgorithm;
@@ -10,10 +11,27 @@ public class FFT {
      * Data structure to hold the input to the algorithm.
      */
     public ComplexNumber[][] input;
+
     /**
      * Data structure to hold the ouput of the algorithm.
      */
     public ComplexNumber[][] output;
+
+    public static class ComplexRGB {
+        public ComplexNumber getComplexNumber(int rgb) {
+            return new ComplexNumber(FlowAlgorithm.getBrightness(rgb), 0.);
+        }
+
+        public int getRGB(ComplexNumber c) {
+            return Color.HSBtoRGB(0f, 0f, (float) getIntensity(c));
+        }
+
+        public double getIntensity(ComplexNumber c) {
+            return c.getMagnitude();
+        }
+    }
+
+    public ComplexRGB complexRGB = new ComplexRGB();
 
     /**
      * Default no argument constructor.
@@ -27,8 +45,19 @@ public class FFT {
         ComplexNumber[][] result = new ComplexNumber[w][h];
         for (int i = 0; i < w; i++) {
             for (int j = 0; j < h; j++) {
-                result[i][j] = new ComplexNumber(FlowAlgorithm.getBrightness(pixels[i][j]), 0.);
-                // result[i][j] = new ComplexNumber(pixels[i][j], 0.);
+                result[i][j] = complexRGB.getComplexNumber(pixels[i][j]);
+            }
+        }
+        return result;
+    }
+
+    private ComplexNumber[][] build2DArray(BufferedImage image) {
+        int w = image.getWidth();
+        int h = image.getHeight();
+        ComplexNumber[][] result = new ComplexNumber[w][h];
+        for (int i = 0; i < w; i++) {
+            for (int j = 0; j < h; j++) {
+                result[i][j] = complexRGB.getComplexNumber(image.getRGB(i, j));
             }
         }
         return result;
@@ -65,11 +94,21 @@ public class FFT {
         compute(false);
     }
 
+    public void setInput(ComplexNumber[][] input) {
+        this.input = input;
+    }
+
+    public void setInput(BufferedImage image) {
+        input = build2DArray(image);
+    }
+
     /**
      * FFT of the given image.
      */
     public FFT(BufferedImage image) {
-        this(getPixels(image));
+        input = build2DArray(image);
+
+        compute(false);
     }
 
     private static int[][] getPixels(BufferedImage image) {
@@ -84,7 +123,7 @@ public class FFT {
         return pixels;
     }
 
-    private void compute(boolean inverse) {
+    public void compute(boolean inverse) {
         long start = System.currentTimeMillis();
 
         int w = input.length;
@@ -127,8 +166,9 @@ public class FFT {
             odd = recursiveFFT(oddValues(x), inverse);
 
             for (int k = 0; k < n / 2; k++) {
-                ComplexNumber factor = inverse ? ComplexNumber.fromPolar(1., 2. * Math.PI * k / n) : ComplexNumber
-                        .fromPolar(1., -2. * Math.PI * k / n);
+                ComplexNumber factor =
+                        inverse ? ComplexNumber.fromPolar(1., 2. * Math.PI * k / n) : ComplexNumber.fromPolar(1., -2.
+                                * Math.PI * k / n);
                 result[k] = even[k].add(odd[k].mul(factor));
                 result[k + n / 2] = even[k].sub(odd[k].mul(factor));
             }
