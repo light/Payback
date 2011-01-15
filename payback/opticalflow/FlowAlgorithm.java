@@ -3,6 +3,7 @@ package payback.opticalflow;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.util.Random;
 
 public class FlowAlgorithm {
     /** The previous and current frames. */
@@ -21,7 +22,7 @@ public class FlowAlgorithm {
     private float alpha = .1f;
 
     /** Number of loops in the velocity computation. */
-    private final static int NB_ITERATIONS = 8;
+    private final static int NB_ITERATIONS = 4;
 
     /**
      * Compute a color's brightness value.
@@ -66,7 +67,10 @@ public class FlowAlgorithm {
             norms = new float[w][h];
         }
 
+        int[] vScroll=resolveScrolling();
+
         // compute the E values
+        float[][] eTmp = new float[w][h];
         e[0] = e[1];
         e[1] = new float[w][h];
         for( int x = 0; x < w; x++ ) {
@@ -77,7 +81,9 @@ public class FlowAlgorithm {
                 // int b = (rgb & 0xFF);
                 // float[] hsbvals = Color.RGBtoHSB(r, g, b, null);
                 // e[1][x][y] = hsbvals[2];
-                e[1][x][y] = getBrightness( rgb );
+                float brightness = getBrightness( rgb );
+                eTmp[x][y] = brightness;
+                e[1][clip(x-vScroll[0], 0, w-1)][clip(y-vScroll[1], 0, h-1)] = brightness;
             }
         }
 
@@ -185,7 +191,63 @@ public class FlowAlgorithm {
                 }
             }
         }
+        
+        e[1] = eTmp;
 
+    }
+
+    private int clip(int i, int min, int max) {
+        return Math.min(Math.max(i, min), max);
+    }
+
+    private int[] resolveScrolling() {
+        int nSamples= 20;
+        int distMax = 3;
+        
+        int[][] pixelCoords = new int[nSamples][2];
+        for (int i = 0; i < pixelCoords.length; i++) {
+            pixelCoords[i][0] = new Random().nextInt(w-2*distMax)+distMax;
+            pixelCoords[i][1] = new Random().nextInt(h-2*distMax)+distMax;
+        }
+        
+        int scoreMax = 0;
+        int[] offsetDuScoreMax = new int[2];
+        for(int dist = -distMax; dist < distMax+1; dist ++) {
+            int score=0;
+            for (int i = 0; i < pixelCoords.length; i++) {
+                int rgb0 = images[0].getRGB(pixelCoords[i][0], pixelCoords[i][1]); 
+                int rgb1 = images[1].getRGB(pixelCoords[i][0]+dist, pixelCoords[i][1]); 
+                score += rgb0 == rgb1 ? 1 : 0;
+            }
+            if(score > scoreMax) {
+                scoreMax = score;
+                offsetDuScoreMax = new int[] {dist, 0};
+            }
+
+            score=0;
+            for (int i = 0; i < pixelCoords.length; i++) {
+                int rgb0 = images[0].getRGB(pixelCoords[i][0], pixelCoords[i][1]); 
+                int rgb1 = images[1].getRGB(pixelCoords[i][0], pixelCoords[i][1]+dist); 
+                score += rgb0 == rgb1 ? 1 : 0;
+            }
+            if(score > scoreMax) {
+                scoreMax = score;
+                offsetDuScoreMax = new int[] {0, dist};
+            }
+        }
+
+        int score=0;
+        for (int i = 0; i < pixelCoords.length; i++) {
+            int rgb0 = images[0].getRGB(pixelCoords[i][0], pixelCoords[i][1]); 
+            int rgb1 = images[1].getRGB(pixelCoords[i][0], pixelCoords[i][1]); 
+            score += rgb0 == rgb1 ? 1 : 0;
+        }
+        if(score == scoreMax) {
+            scoreMax = score;
+            offsetDuScoreMax = new int[] {0, 0};
+        }
+        
+        return offsetDuScoreMax;
     }
 
     /**
