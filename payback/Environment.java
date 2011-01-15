@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import payback.opticalflow.BruteAlgorithm;
 import payback.opticalflow.FlowAlgorithm;
 
 public class Environment {
@@ -18,6 +19,7 @@ public class Environment {
     private BufferedImage megamanImage;
 
     private FlowAlgorithm flow = new FlowAlgorithm();
+    private BruteAlgorithm brute = new BruteAlgorithm();
 
     public Environment() throws Exception {
         InputStream ras = null;
@@ -37,6 +39,12 @@ public class Environment {
     public FlowAlgorithm getFlow() {
         return flow;
     }
+
+    public BruteAlgorithm getBrute() {
+        return brute;
+    }
+
+    
 
     /**
      * Cuts the given image into {@link Rectangle}s containing non-background pixels, based on the <tt>background</tt> color.
@@ -103,7 +111,8 @@ public class Environment {
 
     public Rectangle update( BufferedImage image ) {
 //        Rectangle mm = findMegaman( image );
-        flow.update(image);
+//        flow.update(image);
+        brute.update(image);
         return null;
 
     }

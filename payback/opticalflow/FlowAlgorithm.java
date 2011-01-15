@@ -43,7 +43,7 @@ public class FlowAlgorithm {
      * @param image the current frame
      */
     public void update( BufferedImage image ) {
-        image = blurImage( image );
+//        image = blurImage( image );
         images[0] = images[1];
         h = image.getHeight();
         w = image.getWidth();

@@ -12,7 +12,6 @@ import java.awt.image.DirectColorModel;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -22,7 +21,6 @@ import javax.swing.JPanel;
 
 import payback.Environment;
 import payback.opticalflow.FlowAlgorithm;
-import payback.opticalflow.FlowAlgorithm.Label;
 
 @SuppressWarnings( "serial" )
 public class vvUI extends AppletUI {
@@ -222,10 +220,10 @@ public class vvUI extends AppletUI {
         }
     }
 
-    private class FlowPanel extends JPanel {
+    private class BrutePanel extends JPanel {
         private static final double SCALE_FACTOR = 3;
 
-        public FlowPanel() {
+        public BrutePanel() {
             setPreferredSize( new Dimension( (int) (2 * 256 * SCALE_FACTOR), (int) (240 * SCALE_FACTOR) ) );
         }
 
@@ -233,89 +231,35 @@ public class vvUI extends AppletUI {
         protected void paintComponent( Graphics g ) {
             super.paintComponent( g );
 
-            float[][] u = environment.getFlow().getU();
-            float[][] v = environment.getFlow().getV();
-            float[][] n = environment.getFlow().getNorms();
-            Label[][] l = environment.getFlow().getLabels();
+            boolean[][] interesting = environment.getBrute().getInteresting();
 
-            if( u == null || v == null || n == null || l == null ) {
+            if( interesting == null ) {
                 return; // avoid NPE
             }
 
-            int w = u.length;
-            int h = u[0].length;
-
-            float maxNorm = 0;
-            for( int i = 0; i < w; i++ ) {
-                for( int j = 0; j < h; j++ ) {
-                    maxNorm = Math.max( maxNorm, n[i][j] );
-                }
-            }
-
-            // just for fun
-            // showVelocityHistogram(g, u, v, maxNorm);
-
-            int[] colors = new int[] { 0xFF, 0x00FF, 0x0000FF };
+            int w = interesting.length;
+            int h = interesting[0].length;
 
             for( int i = 0; i < w; i++ ) {
-                for( int j = 0; j < h; j++ ) {
-                    float uij = u[i][j];
-                    float vij = v[i][j];
-                    float norm = n[i][j];
+                for (int j = 0; j < h; j++) {
+                    boolean iij = interesting[i][j];
                     double x = i * SCALE_FACTOR;
                     double y = j * SCALE_FACTOR;
 
                     // show non-null labels
                     double x2 = (w + i) * SCALE_FACTOR;
                     double y2 = j * SCALE_FACTOR;
-                    if( l[i][j] != null ) {
-                        g.setColor( new Color( l[i][j].value * 3498238 ) );
-                        g.fillRect( (int) (x2 - SCALE_FACTOR / 2), (int) (y2 - SCALE_FACTOR / 2), (int) (SCALE_FACTOR), (int) (SCALE_FACTOR) );
-                    }
-
-                    // color based on the velocity (gradient)
-                    // g.setColor(new Color(Color.HSBtoRGB(0, 0, norm * 256 /
-                    // maxNorm)));
-
-                    // color based on the velocity (fractions)
-                    if( norm > 0.5 * maxNorm ) {
-                        g.setColor( Color.red );
-                    } else if( norm < .25 * maxNorm ) {
-                        g.setColor( Color.black );
-                    } else {
-                        g.setColor( Color.blue );
-                    }
-
-                    g.drawLine( (int) x, (int) y, (int) (x + uij * SCALE_FACTOR * .7 / maxNorm), (int) (y + vij * SCALE_FACTOR * .7 / maxNorm) );
+                    g.setColor( Color.ORANGE );
+                    g.fillRect( (int) (x2 - SCALE_FACTOR / 2), (int) (y2 - SCALE_FACTOR / 2), (int) (SCALE_FACTOR), (int) (SCALE_FACTOR) );
                 }
             }
 
         }
 
-        /**
-         * Shows a velocity histogram based on a 0 (slowest) - 250 (fastest) scale.
-         */
-        private void showVelocityHistogram( Graphics g, float[][] u, float[][] v, float maxNorm ) {
-            int[] histo = new int[256];
-            float histoStep = maxNorm / 250;
-            for( int i = 0; i < u.length; i++ ) {
-                for( int j = 0; j < u[0].length; j++ ) {
-                    float uij = u[i][j];
-                    float vij = v[i][j];
-                    int k = (int) (Math.sqrt( uij * uij + vij * vij ) / histoStep);
-                    histo[k]++;
-                }
-            }
-            g.setColor( Color.GREEN );
-            for( int i = 0; i < histo.length; i++ ) {
-                g.drawLine( i, 0, i, histo[i] );
-            }
-        }
     }
 
     private static class FlowPanel2 extends JPanel {
         private final Environment environment;
-        private static float maxNorm = 0;
         private int w = 256;
         private int h = 240;
         int[] pixels;
@@ -343,65 +287,19 @@ public class vvUI extends AppletUI {
         protected void paintComponent( Graphics g ) {
             super.paintComponent( g );
 
-            float[][] u = environment.getFlow().getU();
-            float[][] v = environment.getFlow().getV();
-            // float[][] n = environment.getFlow().getNorms();
-            float[][] n = new float[w][h];
-            Label[][] l = environment.getFlow().getLabels();
+            boolean[][] interesting = environment.getBrute().getInteresting();
 
-            if( u == null || v == null || n == null || l == null ) {
+            if( interesting == null ) {
                 return; // avoid NPE
             }
 
-            // Compute the median
-            float[] allu = new float[w*h];
-            float[] allv = new float[w*h];
-            for( int i = 0; i < w; i++ ) {
-                System.arraycopy( u[i], 0, allu, i*h, h );
-                System.arraycopy( v[i], 0, allv, i*h, h );
-            }
-            Arrays.sort( allu );
-            Arrays.sort( allv );
-            float medianu = allu[(w*h)/2]; // Not exactly, we may be slightly off if w*h is even.
-            float medianv = allv[(w*h)/2];
-
-            // compute norms
-            // TODO refactor :D
             for( int i = 0; i < w; i++ ) {
                 for( int j = 0; j < h; j++ ) {
-                    float uxy = u[i][j] - medianu;
-                    float vxy = v[i][j] - medianv;
-                    n[i][j] = (float) Math.sqrt( uxy * uxy + vxy * vxy );
+                    pixels[i + j * w] = interesting[i][j] ? 0xFFFFFF : 0;
                 }
             }
 
-            // maxNorm = 0;
-            for( int i = 0; i < w; i++ ) {
-                for( int j = 0; j < h; j++ ) {
-                    float norm = n[i][j];
-                    norm = Math.min( norm, 2 ); // Complètement arbitraire
-                    maxNorm = Math.max( maxNorm, norm );
-                }
-            }
-
-            for( int i = 0; i < w; i++ ) {
-                for( int j = 0; j < h; j++ ) {
-                    float uij = u[i][j] - medianu;
-                    float vij = v[i][j] - medianv;
-                    float norm = n[i][j];
-
-                    double angle;
-                    if( uij == 0 ) {
-                        angle = vij > 0 ? Math.PI / 2 : -Math.PI / 2;
-                    } else {
-                        angle = Math.atan( vij / uij ) - (uij > 0 ? 0 : Math.PI);
-                    }
-                    float intensity = norm / maxNorm;
-                    pixels[i + j * w] = Color.HSBtoRGB( (float) ((angle % (2 * Math.PI)) / (2 * Math.PI)), intensity, intensity );
-                }
-            }
-
-            doGrouping( image, u, v );
+//            doGrouping( image, u, v );
 
             g.drawImage( image, 0, 0, null );
         }
