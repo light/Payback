@@ -21,6 +21,7 @@ import javax.swing.JPanel;
 
 import payback.Environment;
 import payback.opticalflow.FlowAlgorithm;
+import payback.opticalflow.BruteAlgorithm.Label;
 
 @SuppressWarnings( "serial" )
 public class vvUI extends AppletUI {
@@ -288,14 +289,16 @@ public class vvUI extends AppletUI {
             super.paintComponent( g );
 
             boolean[][] interesting = environment.getBrute().getInteresting();
+            Label[][] labels = environment.getBrute().getLabels();
 
-            if( interesting == null ) {
+            if( interesting == null || labels == null ) {
                 return; // avoid NPE
             }
 
             for( int i = 0; i < w; i++ ) {
                 for( int j = 0; j < h; j++ ) {
-                    pixels[i + j * w] = interesting[i][j] ? 0xFFFFFF : 0;
+//                    pixels[i + j * w] = interesting[i][j] ? labels[i][j].value * 3299542 : 0;
+                    pixels[i + j * w] =  labels[i][j].value * 3299542 ;
                 }
             }
 
