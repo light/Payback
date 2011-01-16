@@ -69,15 +69,15 @@ public class BruteAlgorithm {
                 interesting[i][j] = rgb[0][i][j] != images[1].getRGB(clip(i + vScroll[0], 0, w - 1), clip(j + vScroll[1], 0, h - 1));
             }
         }
-    
+
         // compute labels
-        Label[][] tmpLabels = new Label[w][h]; // reset labels to null
-        defineLabels(tmpLabels, w, h, interesting);
+        Label[][] tmpLabels = defineLabels();
         labels = tmpLabels;
 
     }
 
-    private static void defineLabels(Label[][] tmpLabels, int w, int h, boolean[][] interesting) {
+    private Label[][] defineLabels() {
+        Label[][] tmpLabels = new Label[w][h]; // reset labels to null
         int nextLabel = 1;
         tmpLabels[0][0] = new Label(nextLabel++);
 
@@ -86,69 +86,21 @@ public class BruteAlgorithm {
                 if (i == 0) {
                     if (j == 0)
                         continue;
-                    if (!doPixel(tmpLabels, i, j, i, j - 1, interesting)) {
+                    if (!doPixel(tmpLabels, i, j, i, j - 1)) {
                         tmpLabels[i][j] = new Label(nextLabel++);
                     }
                 } else {
-                    if (!( doPixel(tmpLabels, i, j, i - 1, j, interesting)
-            | (j != h-1 && doPixel(tmpLabels, i, j, i - 1, j + 1, interesting))
-            | (j != 0 &&   doPixel(tmpLabels, i, j, i, j - 1, interesting))
-            | (j != 0 &&   doPixel(tmpLabels, i, j, i - 1, j - 1, interesting)))) { // gniark
+                    if (!(  doPixel(tmpLabels, i, j, i - 1, j)
+             | (j != h-1 && doPixel(tmpLabels, i, j, i - 1, j + 1))
+             | (j != 0   && doPixel(tmpLabels, i, j, i, j - 1))
+             | (j != 0   && doPixel(tmpLabels, i, j, i - 1, j - 1)))) { // gniark
                         tmpLabels[i][j] = new Label(nextLabel++);
                     }
                 }
             }
         }
-
-//        for (int i = 1; i < w - 1; i++) {
-//            for (int j = 1; j < h - 1; j++) {
-//                for (int k = -1; k < 2; k++) {
-//                    for (int l = -1; l < 2; l++) {
-//                        if (tmpLabels[i + k][j + l] == null) {
-//                            tmpLabels[i + k][j + l] = new Label(nextLabel++);
-//                        }
-//                        if (interesting[i][j] == interesting[i + k][j + l]) {
-//                            if (tmpLabels[i][j] == null) {
-//                                tmpLabels[i][j] = tmpLabels[i + k][j + l];
-//                            } else {
-//                                tmpLabels[i + k][j + l].value = tmpLabels[i][j].value;
-//                                // tmpLabels[i][j].value = tmpLabels[i + k][j + l].value;
-//                            }
-//                        } else {
-//                            if (tmpLabels[i][j] == null) {
-//                                tmpLabels[i][j] = new Label(nextLabel++);
-//                            }
-//                        }
-//                    }
-//                }
-//
-////                for (int k = -1; k < 2; k++) {
-////                    for (int l = -1; l < 2; l++) {
-////                        if (interesting[i][j] == interesting[i + k][j + l] && tmpLabels[i + k][j + l] != null) {
-////                            if(tmpLabels[i][j] == null) {
-////                                tmpLabels[i][j] = tmpLabels[i + k][j + l];
-////                            } else {
-////                                tmpLabels[i][j].value = tmpLabels[i+k][j+l].value;
-////                            }       
-////                        }
-////                    }
-////                }
-////                if (tmpLabels[i][j] == null) {
-////                    tmpLabels[i][j] = new Label(nextLabel++);
-////                }
-////                for (int k = -1; k < 2; k++) {
-////                    for (int l = -1; l < 2; l++) {
-////                        if (interesting[i][j] == interesting[i + k][j + l]) {
-////                            if(tmpLabels[i + k][j + l] == null) {
-////                                tmpLabels[i + k][j + l] = tmpLabels[i][j];
-////                            } else {
-////                                tmpLabels[i + k][j + l].value = tmpLabels[i][j].value;
-////                            }
-////                        }
-////                    }
-////                }
-//            }
-//        }
+        
+        return tmpLabels;
     }
     
     /**
@@ -172,18 +124,19 @@ public class BruteAlgorithm {
      * (JUnit is for pussies)
      */
     public static void main(String[] args) throws Exception {
-        boolean[][] interesting = new boolean[][] {
-                new boolean[] { false, false, false, false, true },
+        BruteAlgorithm ba = new BruteAlgorithm();
+        ba.w = ba.h = 5;
+        ba.interesting = new boolean[][] {
+                new boolean[] { false, false, false, false, true  },
                 new boolean[] { false, true,  false, true,  false },
                 new boolean[] { false, false, true,  false, false },
-                new boolean[] { true,  false, false, false, true },
+                new boolean[] { true,  false, false, false, true  },
                 new boolean[] { true,  false, false, true,  false } };
 
-        Label[][] tmpLabels = new Label[5][5];
-        defineLabels(tmpLabels, 5, 5, interesting);
+        ba.labels = ba.defineLabels();
 
         System.out.println("Labels :");
-        for (Label[] labels : tmpLabels) {
+        for (Label[] labels : ba.labels) {
             for (Label label : labels) {
                 System.out.print(label + " ");
             }
@@ -197,7 +150,7 @@ public class BruteAlgorithm {
      * (i, j) doit avoir un label.
      * @param labels TODO
      */
-     private static boolean doPixel( Label[][] labels, int x, int y, int i, int j , boolean[][] interesting) {
+     private boolean doPixel( Label[][] labels, int x, int y, int i, int j) {
         Label label = labels[i][j];
         if (interesting[x][y] == interesting[i][j]) {
             if (labels[x][y] != null) {
