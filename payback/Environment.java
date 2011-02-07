@@ -8,8 +8,8 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
-import payback.opticalflow.BruteAlgorithm;
-import payback.opticalflow.FlowAlgorithm;
+import payback.algo.BruteAlgorithm;
+import payback.algo.FlowAlgorithm;
 
 public class Environment {
     private List<Entity> entities = new ArrayList<Entity>();

@@ -3,7 +3,7 @@ package payback.fft;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 
-import payback.opticalflow.FlowAlgorithm;
+import payback.algo.FlowAlgorithm;
 
 public class FFT {
 
