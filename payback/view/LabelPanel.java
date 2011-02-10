@@ -13,8 +13,8 @@ import java.awt.image.WritableRaster;
 
 import javax.swing.JPanel;
 
-import payback.Environment;
 import payback.algo.BruteAlgorithm.Label;
+import payback.model.Environment;
 
 @SuppressWarnings("serial")
 public class LabelPanel extends JPanel {

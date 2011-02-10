@@ -2,8 +2,13 @@ package payback.algo;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
+import payback.model.Sprite;
 import payback.params.RuntimeParam;
 
 /**
@@ -49,6 +54,7 @@ public class BruteAlgorithm {
      */
     @RuntimeParam(value = 2, minValue = 1, maxValue = 20)
     private int sampleSize = 2;
+    public List<Sprite> sprites = new ArrayList<Sprite>();
 
     //
     
@@ -109,19 +115,49 @@ public class BruteAlgorithm {
 
         for (int i = 0; i < w; i++) {
             for (int j = 0; j < h; j++) {
-                int x = i + vScroll[0];
-                int y = j + vScroll[1];
+                int x = i - vScroll[0];
+                int y = j - vScroll[1];
                 if (x >= 0 && x < w && y >= 0 && y < h) {
-                    interesting[i][j] = rgb[0][i][j] != rgb[1][x][y];
+                    interesting[i][j] = rgb[1][i][j] != rgb[0][x][y];
                 }
             }
         }
 
         labels = defineLabels();
+        Map<Integer, List<int[]>> regroupedLabels = regroupLabels();
+        sprites = createSprites(regroupedLabels);
     }
 
-    private int clip(int i, int min, int max) {
-        return Math.min(Math.max(i, min), max);
+    private List<Sprite> createSprites(Map<Integer, List<int[]>> regroupedLabels) {
+        List<Sprite> sprites = new ArrayList<Sprite>();
+        for (Integer key : regroupedLabels.keySet()) {
+            if (key.equals(0)) {
+                continue;
+            }
+            List<int[]> pixels = regroupedLabels.get(key);
+            sprites.add(new Sprite(pixels));
+        }
+        return sprites;
+    }
+    
+
+    private Map<Integer, List<int[]>> regroupLabels() {
+        Map<Integer, List<int[]>> result = new HashMap<Integer, List<int[]>>();
+
+        for (int i = 0; i < labels.length; i++) {
+            for (int j = 0; j < labels[i].length; j++) {
+                Label label = labels[i][j];
+                Integer value = label.value;
+                List<int[]> pixList = result.get(value);
+                if (pixList == null) {
+                    pixList = new ArrayList<int[]>();
+                    result.put(value, pixList);
+                }
+                pixList.add(new int[] { i, j, rgb[1][i][j] });
+            }
+        }
+
+        return result;
     }
 
     /**

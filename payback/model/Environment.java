@@ -1,4 +1,4 @@
-package payback;
+package payback.model;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;

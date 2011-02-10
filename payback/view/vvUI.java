@@ -6,7 +6,7 @@ import java.util.HashSet;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import payback.Environment;
+import payback.model.Environment;
 import vnes.AppletUI;
 import vnes.vNES;
 
@@ -31,6 +31,7 @@ public class vvUI extends AppletUI {
         addFrame(300, 0, new SpritesPanel(applet));
         addFrame(600, 0, new LabelPanel(environment));
         addFrame(900, 0, new ParamsPanel(environment.getBrute()));
+        addFrame(300, 300, new LabelSpritesPanel(environment.getBrute()));
 
     }
 
